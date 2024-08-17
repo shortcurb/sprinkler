@@ -1,7 +1,8 @@
 {
-  "rain_delay_start": "2024-08-17 11:09:44.642379",
-  "rain_delay_end": "2024-08-18 11:09:44.664308",
+  "rain_delay_start": null,
+  "rain_delay_end": null,
   "manual_delay": true,
-  "manual_delay_expiration": "2024-08-17 12:09:40.391287",
-  "last_updated": 1723914584
+  "manual_delay_expiration": "2024-08-17 17:37:44.206382",
+  "last_updated": 1723929168,
+  "written_at": 1723934173
 }

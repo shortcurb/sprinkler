@@ -4,17 +4,21 @@ import RPi.GPIO as gpio
 import json,math,time
 
 """
-This is the meat and potatoes of the sprinkling system. It uses Celery and redis as a queueing system 
-to coordinate turning the relays on and off. 
+Do not run this with python3 sprinklerer.py
+Use celery -A sprinklerer worker
+If you run this with python3, it'll exit immediately
+And you spend hours trying to figure out why your jobs aren't executing
 """
 
 app = Celery('tasks', broker='redis://localhost:6379/0', backend='redis://localhost:6379/0')
 
 # One centralized place to manage whether on is LOW or on is HIGH
 def on():
-    return(gpio.LOW)
+#    return(gpio.LOW) # no!
+    return(gpio.HIGH) #confirmed!!
 def off():
-    return(gpio.HIGH)
+    return(gpio.LOW) # confirmed!
+#    return(gpio.HIGH) # no!
 
 def zones():
     zones = {
@@ -27,6 +31,18 @@ def zones():
         }
     return(zones)
 
+def danger_test():
+    gpio.setwarnings(False)
+    gpio.setmode(gpio.BCM)
+    for zoneinfo in zones().values():
+        gpio.setup(zoneinfo['pin'],gpio.OUT)
+        gpio.output(zoneinfo['pin'],on())  
+        time.sleep(.1)
+    time.sleep(.5)
+    turnoff()
+
+
+
 def turnoff():
     gpio.setwarnings(False)
     gpio.setmode(gpio.BCM)
@@ -37,7 +53,7 @@ def turnoff():
 @app.task(bind=True)
 def run_sprinklers(self,sprinkle):
     # zonetime looks like [[1,5],[2,7],[3,4]] a list of lists of zone #, sprinkler duration
-    import time
+    print('run_ing sprinklers')
     gpio.setwarnings(False)
     gpio.setmode(gpio.BCM)
     turnoff()
@@ -66,6 +82,7 @@ def run_sprinklers(self,sprinkle):
     return('Sprinkle complete')
 
 def add_sprinkle_task(sprinkle):
+    print(1)
     run_sprinklers.apply_async(args=[sprinkle])
 
 def cancel_tasks():

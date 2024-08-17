@@ -12,7 +12,7 @@ class MQTT_Client:
         self.responsetopic = os.environ['mqttsprinklerresposnetopic']
         self.commands = ['rain_delay','stop','manual_sprinkle']
         self.connect_mqtt()
-        self.tester()
+#        self.tester()
 
     def connect_mqtt(self):
         self.broker_ip = os.environ['mqttbroker']
@@ -45,9 +45,32 @@ class MQTT_Client:
         a = {'command':'rain_delay','value':24,'units':'hours'}
         b = {'command':'stop','value':1,'units':'hours'}
         c = {'command':'manual_sprinkle','value':[[1,5],[2,7],[3,4]],'units':None}
+        d = {'command':'remove_delay','value':None,'units':None}
+        cmds = [
+            a,
+            b,
+            c,
+            d
+            ]
+
         while True:
-            for i in [a,b,c]:
+            for i in cmds:
                 print(json.dumps(i,indent=2))
                 self.publish_message(self.cmdtopic,json.dumps(i))
-                time.sleep(4)
-MQTT_Client()
+                time.sleep(10)
+
+    def sprinktest(self):
+        z = {'command':'manual_sprinkle','value':[[1,1],[2,1],[3,1]],'units':None}
+        self.publish_message(self.cmdtopic,z)
+
+    def cancel(self):
+        self.publish_message(self.cmdtopic,{'command':'stop','value':1,'units':'hours'})
+    
+    def unblock(self):
+        self.publish_message(self.cmdtopic,{'command':'remove_delay','value':None,'units':None})
+
+a = MQTT_Client()
+#a.tester()
+#a.unblock()
+#a.sprinktest()
+a.cancel()
