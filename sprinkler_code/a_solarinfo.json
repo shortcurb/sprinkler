@@ -1,0 +1,28 @@
+{
+  "today": {
+    "sunrise": "2024-08-17T06:13:25-06:00",
+    "sunset": "2024-08-17T19:55:03-06:00",
+    "solar_noon": "2024-08-17T13:04:14-06:00",
+    "day_length": 49298,
+    "civil_twilight_begin": "2024-08-17T05:46:08-06:00",
+    "civil_twilight_end": "2024-08-17T20:22:20-06:00",
+    "nautical_twilight_begin": "2024-08-17T05:11:25-06:00",
+    "nautical_twilight_end": "2024-08-17T20:57:03-06:00",
+    "astronomical_twilight_begin": "2024-08-17T04:34:27-06:00",
+    "astronomical_twilight_end": "2024-08-17T21:34:01-06:00"
+  },
+  "tomorrow": {
+    "sunrise": "2024-08-18T06:14:22-06:00",
+    "sunset": "2024-08-18T19:53:38-06:00",
+    "solar_noon": "2024-08-18T13:04:00-06:00",
+    "day_length": 49156,
+    "civil_twilight_begin": "2024-08-18T05:47:10-06:00",
+    "civil_twilight_end": "2024-08-18T20:20:51-06:00",
+    "nautical_twilight_begin": "2024-08-18T05:12:35-06:00",
+    "nautical_twilight_end": "2024-08-18T20:55:26-06:00",
+    "astronomical_twilight_begin": "2024-08-18T04:35:49-06:00",
+    "astronomical_twilight_end": "2024-08-18T21:32:11-06:00"
+  },
+  "written_at": 1723911332,
+  "last_updated": 1723911326
+}
