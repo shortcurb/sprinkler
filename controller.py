@@ -1,5 +1,5 @@
 from redis_crud import ActiveJob, ScheduleJob
-from mqtt_client import SprinkleClient
+#from gather_data import DataGather
 import time,json,asyncio,datetime
 import RPi.GPIO as gpio
 
@@ -54,14 +54,21 @@ class ScheduleMaster:
         self.pc.all_off()
 
     async def send_state(self,now):
+        from mqtt_client import SprinkleClient
         zones = self.pc.read_state()
         jobs = self.sj.get_all_jobs()
         next_job_info = {'start_at':3000000000}
+        next_job_id = None
         for job_id,job_info in jobs.items():
             if job_info['is_cancelled']!=True and job_info['start_at'] < next_job_info['start_at'] and job_info['start_at']>now:
                 next_job_info = job_info
+                next_job_id = job_id
+        print('next_job_id',next_job_id)
         sc = SprinkleClient()
-        statemsg = {'currently_running':[],'next_run':datetime.datetime.strftime(datetime.datetime.fromtimestamp(next_job_info['start_at']),'%a %-I:%H %p '),'message':'Currently sprinkling ','sent_at':int(time.time())}
+        if next_job_id is None:
+                statemsg = {'currently_running':[],'next_run':'No runs scheduled','message':'Currently sprinkling ','sent_at':int(time.time())}
+        else:
+            statemsg = {'currently_running':[],'next_run':datetime.datetime.strftime(datetime.datetime.fromtimestamp(next_job_info['start_at']),'%a %-I:%H %p '),'message':'Currently sprinkling ','sent_at':int(time.time())}
         runningzones = []
         for zoneid,zoneinfo in zones.items():
             pinstate = gpio.input(zoneinfo['pin'])
@@ -107,7 +114,7 @@ class ScheduleMaster:
     async def main_loop(self):
         possible_funcs = [
             [1, self.job_check],
-            [5, self.send_state],
+            [1, self.send_state],
         ]
         while True:
             now = int(time.time())
