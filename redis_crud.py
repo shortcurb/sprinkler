@@ -73,7 +73,7 @@ class ScheduleJob:
         for existing_job_id,existing_job_info in existing_jobs.items():
             if existing_job_info['is_cancelled'] != True and existing_job_id !=job_id: # only worry about clashes with different jobs and non-cancelled jobs
                 if job_start >= existing_job_info['start_at'] and job_start <= existing_job_info['end_at']:
-                    raise ValueError(f"Job scheduled to start during existing job {existing_job_id}")
+                    raise ValueError(f"Job {job_id} scheduled to start during existing job {existing_job_id}")
                 elif (job_end >= existing_job_info['start_at'] and job_end <= existing_job_info['end_at']):
                     raise ValueError(f"Job scheduled to end during existing job {existing_job_id}")
 
@@ -120,6 +120,7 @@ class ScheduleJob:
             update_job.update({'updated_at':int(time.time())})
             self.redisclient.set(job_id,json.dumps(update_job))
         except ValueError as e:
+            print('i am here')
             traceback.print_exc()
 
     def cancel_job(self,job_id:str,now=int(time.time())):
@@ -127,6 +128,11 @@ class ScheduleJob:
         job_info.update({'is_cancelled':True,'cancelled_at':now})
         self.update_job(job_id,job_info)
 
+    def uncancel_job(self,job_id:str,now=int(time.time())):
+        job_info = self.get_job(job_id)
+        job_info.update({'is_cancelled':False,'cancelled_at':None})
+        self.update_job(job_id,job_info)
+        
     def _delete_job(self,job_id:str):
         self.redisclient.delete(job_id)
 
@@ -154,7 +160,20 @@ class DataCrud:
         if data != None:
             data = json.loads(data)
         return data
-    
+
+if __name__ == '__main__':
+    redisclient = redis.Redis(host='localhost', port=6379, decode_responses = True)
+    keys = redisclient.keys('*')
+#    print(json.dumps(keys,indent=2))
+    data = {}
+    for key in keys:
+        try:
+            value = redisclient.get(key)
+            data[key] = json.loads(value)
+        except Exception as e:
+            pass
+    print(json.dumps(data,indent=2))
+
 """
 This thing will have to consist of three separate entities that work together, probably through redis. 
 So the structure of data in redis is very important

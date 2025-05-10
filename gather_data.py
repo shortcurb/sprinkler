@@ -6,7 +6,8 @@ class DataGather():
     def __init__(self):
         self.dc = DataCrud()
 
-    def compute_next_run(self): # This should be part of the controller I think
+    async def compute_next_run(self):
+        print('computing next run')
         zones = PinController().zones
         solarinfo = self.dc.retrieve_data('solarinfo')
         weatherinfo = self.dc.retrieve_data('weatherinfo')
@@ -89,7 +90,7 @@ if '__main__' == __name__:
     dg = DataGather()
     asyncio.run(dg.get_solar())
     asyncio.run(dg.get_weather())
-    dg.compute_next_run()
+    asyncio.run(dg.compute_next_run())
     # run this via cron at like 2am and 2pm
 #    print(json.dumps(dg.dc.retrieve_data('solarinfo'),indent=2))
 #    print(json.dumps(dg.dc.retrieve_data('weatherinfo'),indent=2))

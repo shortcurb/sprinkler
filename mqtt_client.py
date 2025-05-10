@@ -1,8 +1,8 @@
-import datetime,json,os,traceback,time
-
+import datetime,json,os,traceback,time,asyncio
 import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
 from redis_crud import ScheduleJob, ActiveJob, DataCrud
+from gather_data import DataGather
 
 
 class SprinkleClient:
@@ -18,13 +18,12 @@ class SprinkleClient:
         self.cmdtopic = os.environ['mqttsprinklercmdtopic']
         self.responsetopic = os.environ['mqttsprinklerresposnetopic']
 
-        self.commands = ['rain_delay','stop','manual_sprinkle','remove_delay']
+        self.commands = ['rain_delay','delay_stop','manual_sprinkle','remove_delay','gather_and_compute', 'skip_next','unskip_next']
 
     def connect_mqtt(self):
         # Handle reconnection logic elsewhere, just purely connecting here
         if self.connected:
             print('Already connected')
-            self.connected == True
         else:
             self.mqtt_client = mqtt.Client()
             self.mqtt_client.on_message = self.on_message
@@ -48,6 +47,25 @@ class SprinkleClient:
             self.on_disconnect()
             # Let other parts handle the reconnection logic
     
+    def gather_and_compute(self,payload):
+        print('gathering and computing')
+        now = int(time.time())
+        sj = ScheduleJob()
+        jobs = sj.get_all_jobs()
+        job_imminent = False
+        for job_id, job_info in jobs.items():
+            if job_info['is_cancelled'] !=True and now>job_info['start_at'] and now < job_info['end_at']:
+                job_imminent = True
+        if job_imminent == False:
+            dg = DataGather()
+            asyncio.run(self._async_gather_and_compute(dg))
+
+    async def _async_gather_and_compute(self, dg):
+        weather_task = asyncio.create_task(dg.get_weather())
+        solar_task = asyncio.create_task(dg.get_solar())
+        await asyncio.gather(weather_task, solar_task)
+        await dg.compute_next_run()
+
     def delay_stop(self,payload):
         #    payload looks like this: msg = {'command':'delay_stop','value':5,'units':'minutes'}
         # or payload looks like this: msg = {'command':'delay_stop','value':2,'units':'hours'}
@@ -64,7 +82,6 @@ class SprinkleClient:
         msg = "Delay/stop request received"
         for job_id,job_info in sj.get_all_jobs().items():
             # if the job isn't cancelled and ( the it starts before the delay or ends before the delay and it hasn't already completed)
-            
             if (job_info['start_at'] < delay_until or job_info['end_at'] < delay_until) and job_info['is_cancelled'] != True and now<job_info['end_at']:
                 if delay_seconds <=600:
                     sj.reschedule_existing_job(now,job_id, delay_seconds)
@@ -77,12 +94,46 @@ class SprinkleClient:
         message = {'received_cmd':'stop','response':msg}
         self.publish_message(self.responsetopic,message)
 
+    def skip_next(self,payload):
+        sj = ScheduleJob()
+        now = int(time.time())
+        next_job_id = None
+        next_job_info = {'start_at':now+10**10} 
+        
+        for job_id,job_info in sj.get_all_jobs().items():
+            if job_info['is_cancelled'] == False and job_info['is_active'] == False and job_info['start_at'] > now and now < next_job_info['start_at']:
+                next_job_id = job_id
+                next_job_info = job_info
+                
+        print(next_job_id)
+#        print('next_job_info',json.dumps(next_job_info,indent=2))
+        sj.cancel_job(next_job_id,now)
+        message = {'received_cmd':'skip_next','response':f"Skipping next job {next_job_id}"}
+        self.publish_message(self.responsetopic,message)
+
+    def unskip_next(self,payload):
+        sj = ScheduleJob()
+        now = int(time.time())
+        next_job_id = None
+        next_job_info = {'start_at':now+10**10} 
+        for job_id,job_info in sj.get_all_jobs().items():
+            if job_info['is_cancelled'] == True and job_info['start_at'] > now and now < next_job_info['start_at']:
+                next_job_id = job_id
+                next_job_info = job_info
+        print(next_job_id)
+        sj.uncancel_job(next_job_id)
+
+
+    def remove_delay(self,payload):
+        dc = DataCrud()
+        dc.update_data('delaystopinfo',{})
+
     def manual_sprinkle(self,payload):
     #    payload looks like this: msg = {'command':'manual_sprinkle','value':[[1,5],[2,7],[3,4]],'units':None}
         sj = ScheduleJob()
         now = int(time.time())
         job_info = {
-            'start_at':now + 5,
+            'start_at':now,
             'zone_info':payload['value'],
             'source':'manual'
                     }
@@ -94,7 +145,8 @@ class SprinkleClient:
         self.publish_message(self.responsetopic,{'received_cmd':'manual_sprinkle','response':message})
 
     def subcribe_loop(self):
-        self.on_disconnect('','','')
+#        self.on_disconnect('','','')
+        self.connect_mqtt()
         self.mqtt_client.subscribe(self.cmdtopic)
         self.mqtt_client.loop_forever()
 
@@ -114,6 +166,7 @@ class SprinkleClient:
             try:
                 self.connect_mqtt() # connect_mqtt handles setting self.connected to True
                 # self.connect_mqtt will also raise an exception if if fails, so put the sleep in the except
+                self.subscribe_loop()
             except KeyboardInterrupt:
                 return
             except: 
