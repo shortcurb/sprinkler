@@ -12,6 +12,7 @@ class DataGather():
         solarinfo = self.dc.retrieve_data('solarinfo')
         weatherinfo = self.dc.retrieve_data('weatherinfo')
         delaystopinfo = self.dc.retrieve_data('delaystopinfo')
+        delaystopinfo.setdefault('delay_stop_until_s',None)
 
 #        print('solarinfo',json.dumps(solarinfo,indent=2))
 #        print('weatherinfo',json.dumps(weatherinfo,indent=2))
@@ -48,7 +49,7 @@ class DataGather():
 
         sprinkle = [[key, value['duration'] + duration_modulation] for key, value in zones.items()]  
         if next_run != None:
-            if next_run > delaystopinfo['delay_stop_until_s']:
+            if delaystopinfo['delay_stop_until_s'] is None or next_run > delaystopinfo['delay_stop_until_s']:
                 payload = {
                     'start_at':next_run,
                     'zone_info':sprinkle,
