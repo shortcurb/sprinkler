@@ -1,5 +1,5 @@
 from redis_crud import ActiveJob, ScheduleJob
-#from gather_data import DataGather
+#from gather_data import DataGather Do not do this! It will cause a circular import!
 import time,json,asyncio,datetime
 import RPi.GPIO as gpio
 
@@ -8,12 +8,12 @@ class PinController():
         gpio.setwarnings(False)
         gpio.setmode(gpio.BCM)
         self.zones = {
-                1:{'name':'NE Corner', 'duration':7,'pin':17,'state':-1},
-                2:{'name':'North Yard','duration':7,'pin':22,'state':-1},
-                3:{'name':'NW Corner', 'duration':7,'pin':24,'state':-1},
-                4:{'name':'East Yard', 'duration':7,'pin':25,'state':-1},
-                5:{'name':'SW Yard',   'duration':7,'pin':16,'state':-1},
-                6:{'name':'South Yard','duration':7,'pin':26,'state':-1},
+                1:{'name':'NE Corner',  'duration':7,'pin':17,'state':-1},
+                2:{'name':'North Yard', 'duration':7,'pin':22,'state':-1},
+                3:{'name':'East Yard',  'duration':7,'pin':24,'state':-1},
+                4:{'name':'NW Yard',    'duration':7,'pin':25,'state':-1},
+                5:{'name':'South Yard', 'duration':7,'pin':16,'state':-1},
+                6:{'name':'SW Yard',    'duration':7,'pin':26,'state':-1},
             }
         for zoneinfo in self.zones.values():
             gpio.setup(zoneinfo['pin'],gpio.OUT)
@@ -97,6 +97,7 @@ class ScheduleMaster:
         for job_id,job_info in scheduled_jobs.items():
             # If its not a cancelled job and now is between the start and end + 10s, its active
             if job_info['is_cancelled'] != True and now > job_info['start_at'] and now < job_info['end_at']+10:
+                # This is the area where the job is active and running
 
                 if job_info['is_active'] != True:
                     job_info.update({'is_active':True})
@@ -105,9 +106,11 @@ class ScheduleMaster:
                 self.active_processor(now,job_info)
                 active = True
             else:
+                # This is where the job is not active/running
+
                 if job_info['is_active'] != False:
                     job_info.update({'is_active':False})
-                    self.sj.update_job(job_id,job_info)
+                    self.sj.update_job(job_id,job_info)              
         if active == False:
             self.pc.all_off()   
 
